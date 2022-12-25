@@ -529,8 +529,8 @@ def franchiseRevenue() -> List[Tuple[str, int]]:
     grouped_revenues = []
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT T1.movieName, COALESCE(T1.tot_revenue,0) AS tot_revenue "
-                        "FROM (Productions P1 RIGHT OUTER JOIN Movie M1 ON (P1.movieName = M1.movieName AND P1.movie_year = M1.movie_year) ) AS T1"
+        query = sql.SQL("SELECT T1.movieName, COALESCE(SUM(T1.production_revenue,0)) AS tot_revenue "
+                        "FROM (Productions P1 RIGHT OUTER JOIN Movie M1 ON (P1.movieName = M1.movieName AND P1.movie_year = M1.movie_year)) AS T1"
                         "GROUP BY T1.movieName"
                         "ORDER BY movieName DESC;").format()
         _, result = conn.execute(query)
@@ -546,9 +546,26 @@ def franchiseRevenue() -> List[Tuple[str, int]]:
     return grouped_revenues
 
 
-def studioRevenueByYear() -> List[Tuple[str, int]]:
-    # TODO: implement
-    pass
+def studioRevenueByYear() -> List[Tuple[int, int, int]]:
+    conn = None
+    grouped_revenues = []
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT T2.studioID, T2.movie_year, COALESCE(SUM(T2.production_revenue,0)) AS tot_revenue "
+                        "FROM Productions AS T2"
+                        "GROUP BY T2.studioID, T2.movie_year"
+                        "ORDER BY T2.studioID DESC;").format()
+        _, result = conn.execute(query)
+        conn.commit()
+        if not result.isEmpty():
+            for i in range(result.size()):
+                grouped_revenues.append((result[i]['studioID'], result[i]['movie_year'], result[i]['tot_revenue']))
+    except Exception as e:
+        print(e)
+        grouped_revenues = []
+    finally:
+        conn.close()
+    return grouped_revenues
 
 
 def getFanCritics() -> List[Tuple[int, int]]:
