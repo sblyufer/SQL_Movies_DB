@@ -60,6 +60,14 @@ def createTables():
                               "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
                               "CHECK (rating > 0 AND rating < 6); "
                               
+                              "CREATE TABLE Roles("
+                              "roleName TEXT NOT NULL, "
+                              "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Roles_key PRIMARY KEY (movie_name, movie_year, actorID)); "
+                              
+                              
                               #TODO: change this table
                               "CREATE TABLE ActingJobs("
                               "job_salary INTEGER NOT NULL, "
