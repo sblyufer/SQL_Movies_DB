@@ -474,13 +474,62 @@ def getStudioProfile(studio_id: int) -> Studio:
     return studio
 
 
-def criticRatedMovie(movieName: str, movieYear: int, criticID: int, rating: int) -> ReturnValue:
-    # TODO: implement
+
+def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int) -> ReturnValue:
+    result = ReturnValue.OK
+    rows_effected = 0
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("INSERT INTO Reviews(movieName,movie_year,criticID,review_rating) "
+                        "VALUES({movieName}, {movieYear}, {critic_id}, {rating})") \
+            .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id),rating=sql.Literal(rating))
+        rows_effected, _ = conn.execute(query)
+    except DatabaseException.ConnectionInvalid as e:
+        result = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        result = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        result = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        result = ReturnValue.ALREADY_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        result = ReturnValue.ERROR
+    finally:
+        conn.close()
+        return result
     pass
 
 
-def criticDidntRateMovie(movieName: str, movieYear: int, criticID: int) -> ReturnValue:
-    # TODO: implement
+def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
+    conn = None
+    rows_effected, result = 0, ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE "
+                        "FROM Reviews "
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND criticID={critic_id}").\
+            format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id))
+        rows_effected, _ = conn.execute(query)
+    except DatabaseException.ConnectionInvalid as e:
+        result = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.CHECK_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        result = ReturnValue.ERROR
+    finally:
+        conn.close()
+        if rows_effected == 0:
+            return ReturnValue.NOT_EXISTS
+        return result
     pass
 
 
@@ -494,25 +543,100 @@ def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> Retu
     pass
 
 
-def getActorsRoleInMovie(actor_id: int, movie_name: str, movieYear: int) -> List[str]:
-    # TODO: implement
-    pass
-
-
 def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: int, revenue: int) -> ReturnValue:
-    # TODO: implement
+    result = ReturnValue.OK
+    rows_effected = 0
+    conn = None
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("INSERT INTO "
+                        "Productions(movieName,movie_year,studioID,budget,revenue) "
+                        "VALUES({movieName}, {movieYear}, {studioID}, {budget}, {revenue})") \
+             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID), critic_id=sql.Literal(critic_id),budget=sql.Literal(budget),
+                    revenue=sql.Literal(revenue))
+        rows_effected, _ = conn.execute(query)
+    except DatabaseException.ConnectionInvalid as e:
+        result = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        result = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        result = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        result = ReturnValue.ALREADY_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        result = ReturnValue.ERROR
+    finally:
+        conn.close()
+        return result
     pass
 
 
 def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> ReturnValue:
-    # TODO: implement
+    conn = None
+    rows_effected, result = 0, ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE "
+                        "FROM Productions "
+                        "WHERE movieName={movieName} AND movie_year={movieYear} AND studioID={studioID}"). \            
+             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID))
+        rows_effected, _ = conn.execute(query)
+    except DatabaseException.ConnectionInvalid as e:
+        result = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.CHECK_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        result = ReturnValue.ERROR
+    finally:
+        conn.close()
+        if rows_effected == 0:
+            return ReturnValue.NOT_EXISTS
+        return result
     pass
 
 
 # ---------------------------------- BASIC API: ----------------------------------
 def averageRating(movieName: str, movieYear: int) -> float:
-    # TODO: implement
-    pass
+    conn = None
+    output = 0
+    rows_effected, result = 0, ResultSet()
+    try:
+        query = sql.SQL("SELECT AVG(review_rating) "
+                        "FROM Reviews "
+                        "WHERE movieName={movieName} AND movie_year={movieYear}").\
+            format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear))
+        conn = Connector.DBConnector()
+        rows_effected, result = conn.execute(query)
+        # rows_effected is the number of rows received by the SELECT
+        for row in result.rows:
+            for val in row:
+                output = val
+        if output is None:
+            output = 0
+    except DatabaseException.ConnectionInvalid as e:
+        output = -1
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        output = 0
+    except DatabaseException.CHECK_VIOLATION as e:
+        output = 0
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        output = 0
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        output = 0
+    except Exception as e:
+        output = 0
+    finally:
+        conn.close()
+        return output
+
 
 
 def averageActorRating(actorID: int) -> float:
