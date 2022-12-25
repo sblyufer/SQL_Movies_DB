@@ -49,9 +49,19 @@ def createTables():
                               "FOREIGN KEY (studioID) REFERENCES Studios(studioID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)); "
+                              "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)) "
+                              "CHECK (production_budget >= 0 AND production_revenue < 6); "
 
                               "CREATE TABLE Reviews("
+                              "review_rating INTEGER NOT NULL, "
+                              "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
+                              "CHECK (rating > 0 AND rating < 6); "
+                              
+                              #TODO: change this table
+                              "CREATE TABLE ActingJobs("
                               "review_rating INTEGER NOT NULL, "
                               "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
