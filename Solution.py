@@ -51,12 +51,12 @@ def createTables():
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
                               "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)); "
 
-                              # "CREATE TABLE R2("
-                              # "ram_id INTEGER NOT NULL, "
-                              # "disk_id INTEGER NOT NULL, "
-                              # "FOREIGN KEY (ram_id) REFERENCES RAMs(ram_id) ON DELETE CASCADE, "
-                              # "FOREIGN KEY (disk_id) REFERENCES Disks(disk_id) ON DELETE CASCADE, "
-                              # "CONSTRAINT R2_key PRIMARY KEY (ram_id, disk_id));"
+                              "CREATE TABLE Reviews("
+                              "review_rating INTEGER NOT NULL, "
+                              "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
+                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
 
                               # "CREATE VIEW QueriesRunOnMultipleDisks AS "
                               # "SELECT T1.query_id "
@@ -147,7 +147,7 @@ def dropTables():
 
                               "DROP TABLE Productions; "
 
-                              # "DROP TABLE R2; "
+                              "DROP TABLE Reviews; "
 
                               "DROP TABLE Critics; "
 
