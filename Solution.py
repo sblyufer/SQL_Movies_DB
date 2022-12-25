@@ -39,14 +39,14 @@ def createTables():
                               "CHECK (actorID > 0), CHECK (actor_age > 0), CHECK (actor_height > 0));"
 
                               "CREATE TABLE Studios("
-                              "studio_id INTEGER PRIMARY KEY, "
+                              "studioID INTEGER PRIMARY KEY, "
                               "studio_name TEXT NOT NULL, "
-                              "CHECK (studio_id > 0); "
+                              "CHECK (studioID > 0); "
 
                               "CREATE TABLE Productions("
                               "production_budget INTEGER NOT NULL, "
                               "production_revenue INTEGER NOT NULL, "
-                              "FOREIGN KEY (studio_id) REFERENCES Studios(studio_id) ON DELETE CASCADE, "
+                              "FOREIGN KEY (studioID) REFERENCES Studios(studioID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
                               "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)); "
@@ -393,18 +393,71 @@ def getMovieProfile(movie_name: str, year: int) -> Movie:
 
 
 def addStudio(studio: Studio) -> ReturnValue:
-    # TODO: implement
-    pass
+    conn = None
+    return_value = ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL(
+            "INSERT INTO Studios "
+            "VALUES({studio_id}, {studio_name});").format(
+            studio_id=sql.Literal(studio.getStudioID()),
+            studio_name=sql.Literal(studio.getStudioName()))
+        conn.execute(query)
+        conn.commit()
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.CHECK_VIOLATION as e:
+        return_value = ReturnValue.BAD_PARAMS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        return_value = ReturnValue.ALREADY_EXISTS
+    except Exception:
+        return_value = ReturnValue.ERROR
+    finally:
+        conn.close()
+    return return_value
 
 
 def deleteStudio(studio_id: int) -> ReturnValue:
-    # TODO: implement
-    pass
+    conn = None
+    return_value = ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE FROM Studios "
+                        "WHERE studioID = {id};").format(
+            id=sql.Literal(
+                studio_id))
+        rows_effected, _ = conn.execute(query)
+        conn.commit()
+        if rows_effected == 0:
+            return_value = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        return_value = ReturnValue.ERROR
+    finally:
+        conn.close()
+    return return_value
 
 
 def getStudioProfile(studio_id: int) -> Studio:
-    # TODO: implement
-    pass
+    conn = None
+    studio = Studio()
+    try:
+        conn = Connector.DBConnector()
+        sql_query = sql.SQL("SELECT * "
+                            "FROM Studios "
+                            "WHERE studioID = {id};").format(
+            id=sql.Literal(studio_id))
+        _, result = conn.execute(sql_query)
+        conn.commit()
+        if result.isEmpty():
+            studio = studio.badStudio()
+        else:
+            studio.setStudioID(int(result[0]['studioID']))
+            studio.setStudioName(str(result[0]['studio_name']))
+    except Exception:
+        studio = studio.badStudio()
+    finally:
+        conn.close()
+    return studio
 
 
 def criticRatedMovie(movieName: str, movieYear: int, criticID: int, rating: int) -> ReturnValue:
