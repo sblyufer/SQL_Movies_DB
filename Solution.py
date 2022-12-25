@@ -62,11 +62,13 @@ def createTables():
                               
                               #TODO: change this table
                               "CREATE TABLE ActingJobs("
-                              "review_rating INTEGER NOT NULL, "
-                              "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
+                              "job_salary INTEGER NOT NULL, "
+                              "job_roles TEXT NOT NULL, "
+                              "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
+                              "CONSTRAINT Jobs_key PRIMARY KEY (movie_name, movie_year, actorID))"
+                              "CHECK (job_salary > 0); "
 
                               # "CREATE VIEW QueriesRunOnMultipleDisks AS "
                               # "SELECT T1.query_id "
@@ -155,6 +157,8 @@ def dropTables():
 
                               # "DROP VIEW QueriesCanRunOnDisks; "
 
+                              "DROP TABLE ActingJobs; "
+                              
                               "DROP TABLE Productions; "
 
                               "DROP TABLE Reviews; "
