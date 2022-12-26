@@ -547,8 +547,33 @@ def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int
 
 
 def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> ReturnValue:
-    # TODO: implement
-    pass
+    conn = None
+    rows_effected, result = 0, ReturnValue.OK
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("DELETE "
+                        "FROM Roles "
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND actorID={actorID}").\
+            format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
+        rows_effected, _ = conn.execute(query)
+    except DatabaseException.ConnectionInvalid as e:
+        result = ReturnValue.ERROR
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.CHECK_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        result = ReturnValue.NOT_EXISTS
+    except Exception as e:
+        result = ReturnValue.ERROR
+    finally:
+        conn.close()
+        if rows_effected == 0:
+            return ReturnValue.NOT_EXISTS
+        return result
+
 
 
 def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: int, revenue: int) -> ReturnValue:
