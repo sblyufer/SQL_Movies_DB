@@ -705,7 +705,7 @@ def averageActorRating(actorID: int) -> float:
     avg=0
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT AVG(review_rating) FROM Reviews INNER JOIN Roles ON Reviews.movieName = Roles.movieName AND Reviews.movie_year = Roles.movie_year WHERE Roles.actorID = %s"
+        query = sql.SQL("SELECT AVG(review_rating) FROM Reviews INNER JOIN Roles ON Reviews.movieName = Roles.movieName AND Reviews.movie_year = Roles.movie_year WHERE Roles.actorID = {actorID}"
     .format(
             actorID=sql.Literal(actorID))
 
