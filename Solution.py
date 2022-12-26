@@ -20,75 +20,80 @@ def createTables():
         transaction = sql.SQL("BEGIN;"
 
                               "CREATE TABLE Critics("
-                              "criticID INTEGER PRIMARY KEY, "
-                              "critic_name TEXT NOT NULL, "
-                              "CHECK (criticID > 0); "
-                              
-                              #TODO: IN is apparently correct
+                              "criticID INTEGER PRIMARY KEY,"
+                              "critic_name TEXT NOT NULL,"
+                              "CHECK (criticID > 0));"
+
                               "CREATE TABLE Movies("
                               "movieName TEXT NOT NULL, "
-                              "movie_year INTEGER NOT NULL,"
-                              "movie_genre TEXT NOT NULL, "
-                              "CHECK (movie_year >= 1895), CHECK (movie_genre IN ('Drama', 'Action', 'Comedy', 'Horror'))"
+                              "movie_year INTEGER NOT NULL CHECK (movie_year >= 1895),"
+                              "movie_genre TEXT NOT NULL CHECK (movie_genre = 'Drama' OR  movie_genre = 'Action' OR movie_genre = 'Comedy' OR movie_genre = 'Horror'), "
                               "CONSTRAINT Movies_key PRIMARY KEY (movieName, movie_year)); "
 
                               "CREATE TABLE Actors("
                               "actorID INTEGER PRIMARY KEY,"
                               "actor_name TEXT NOT NULL, "
                               "actor_age INTEGER NOT NULL,"
-                              "age_height INTEGER NOT NULL,"
+                              "actor_height INTEGER NOT NULL,"
                               "CHECK (actorID > 0), CHECK (actor_age > 0), CHECK (actor_height > 0));"
 
                               "CREATE TABLE Studios("
                               "studioID INTEGER PRIMARY KEY, "
                               "studio_name TEXT NOT NULL, "
-                              "CHECK (studioID > 0); "
+                              "CHECK (studioID > 0)); "
 
                               "CREATE TABLE Productions("
                               "production_budget INTEGER NOT NULL CHECK (production_budget >= 0), "
                               "production_revenue INTEGER NOT NULL CHECK (production_revenue >=0), "
+                              "studioID INTEGER NOT NULL,"
+                              "movieName TEXT NOT NULL, "
+                              "movie_year INTEGER NOT NULL CHECK (movie_year >= 1895),"
                               "FOREIGN KEY (studioID) REFERENCES Studios(studioID) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)); "
+                              "FOREIGN KEY (movieName, movie_year) REFERENCES Movies(movieName, movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Productions_key PRIMARY KEY (movieName, movie_year)); "
 
                               "CREATE TABLE Reviews("
                               "review_rating INTEGER NOT NULL CHECK (review_rating > 0), CHECK (review_rating < 6), "
+                              "movieName TEXT NOT NULL, "
+                              "movie_year INTEGER NOT NULL CHECK (movie_year >= 1895),"
+                              "criticID INTEGER,"
                               "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
-                              
+                              "FOREIGN KEY (movieName, movie_year) REFERENCES Movies(movieName, movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Reviews_key PRIMARY KEY (movieName, movie_year, criticID)); "
+
                               "CREATE TABLE Roles("
                               "roleName TEXT NOT NULL, "
+                              "movieName TEXT NOT NULL, "
+                              "movie_year INTEGER NOT NULL CHECK (movie_year >= 1895),"
+                              "actorID INTEGER NOT NULL,"
                               "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Roles_key PRIMARY KEY (movie_name, movie_year, actorID)); "
-                              
+                              "FOREIGN KEY (movieName, movie_year) REFERENCES Movies(movieName, movie_year) ON DELETE CASCADE, "
+                              "CONSTRAINT Roles_key PRIMARY KEY (movieName, movie_year, actorID)); "
+
                               "CREATE TABLE ActingJobs("
                               "job_salary INTEGER NOT NULL CHECK (job_salary > 0), "
+                              "movieName TEXT NOT NULL, "
+                              "movie_year INTEGER NOT NULL CHECK (movie_year >= 1895),"
+                              "actorID INTEGER NOT NULL,"
                               "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
-                              "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Jobs_key PRIMARY KEY (movie_name, movie_year, actorID));"
+                              "FOREIGN KEY (movieName,movie_year) REFERENCES Movies(movieName,movie_year) ON DELETE CASCADE,"
+                              "CONSTRAINT Jobs_key PRIMARY KEY (movieName, movie_year, actorID));"
 
-                              # TODO: check if correct
                               "CREATE VIEW CriticToStudio AS "
-                              "SELECT V1.criticID, V1.studioID, COUNT(*) AS critic_unique"
-                              "FROM (Productions INNER JOIN Reviews"
-                              "ON (Production.movie_name = Reviews.movie_name AND Production.movie_year = Reviews.movie_year)) AS V1 "
+                              "SELECT V1.studioID, COUNT(*) AS count1 "
+                              "FROM (SELECT R1.criticID, P1.studioID"
+                              "      FROM Productions P1 INNER JOIN Reviews R1"
+                              "      ON P1.movieName = R1.movieName AND P1.movie_year = R1.movie_year) AS V1 "
                               "GROUP BY V1.criticID, V1.studioID;"
-                              
-                              # TODO: same correctness as above
-                              "CREATE VIEW StudioFilms AS "
-                              "SELECT studioID, COUNT(*) AS studio_unique"
-                              "FROM Productions"
-                              "GROUP BY V1.studioID;"
 
-                              "COMMIT;")
+                              "CREATE VIEW StudioFilms AS "
+                              "SELECT V2.studioID, COUNT(*) AS count2 "
+                              "FROM (SELECT P2.studioID, P2.movieName, P2.movie_year "
+                              "      FROM Productions P2) AS V2 "
+                              "GROUP BY V2.studioID;").format()
 
         conn.execute(transaction)
+        conn.commit()
     except DatabaseException.ConnectionInvalid as e:
         conn.rollback()
         print(e)
@@ -116,13 +121,13 @@ def clearTables():
         conn = Connector.DBConnector()
         transaction = sql.SQL("BEGIN;"
 
-                              "DELETE FROM Critics; "
+                              "DELETE * FROM Critics; "
 
-                              "DELETE FROM Movies; "
+                              "DELETE * FROM Movies; "
 
-                              "DELETE FROM Actors;"
+                              "DELETE * FROM Actors;"
 
-                              "DELETE FROM Studios; "
+                              "DELETE * FROM Studios; "
 
                               "COMMIT;")
 
@@ -155,25 +160,27 @@ def dropTables():
         conn = Connector.DBConnector()
         transaction = sql.SQL("BEGIN;"
 
-                              "DROP VIEW StudioFilms; "
+                              "DROP TABLE IF EXISTS Critics CASCADE; "
 
-                              "DROP VIEW CriticsToStudio; "
-                              
-                              "DROP TABLE Roles;"
+                              "DROP TABLE IF EXISTS Movies CASCADE;"
 
-                              "DROP TABLE ActingJobs; "
-                              
-                              "DROP TABLE Productions; "
+                              "DROP TABLE IF EXISTS Actors CASCADE; "
 
-                              "DROP TABLE Reviews; "
+                              "DROP TABLE IF EXISTS Studios CASCADE; "
 
-                              "DROP TABLE Critics; "
+                              "DROP VIEW IF EXISTS StudioFilms CASCADE; "
 
-                              "DROP TABLE Movies;"
+                              "DROP VIEW IF EXISTS CriticsToStudio CASCADE; "
 
-                              "DROP TABLE Actors; "
+                              "DROP TABLE IF EXISTS Roles CASCADE;"
 
-                              "DROP TABLE Studios; "
+                              "DROP TABLE IF EXISTS ActingJobs CASCADE; "
+
+                              "DROP TABLE IF EXISTS Reviews CASCADE; "
+
+                              "DROP TABLE IF EXISTS Productions CASCADE; "
+
+
 
                               "COMMIT;")
 
@@ -478,7 +485,6 @@ def getStudioProfile(studio_id: int) -> Studio:
     return studio
 
 
-
 def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int) -> ReturnValue:
     result = ReturnValue.OK
     rows_effected = 0
@@ -487,7 +493,8 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
         conn = Connector.DBConnector()
         query = sql.SQL("INSERT INTO Reviews(movieName,movie_year,criticID,review_rating) "
                         "VALUES({movieName}, {movieYear}, {critic_id}, {rating})") \
-            .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id),rating=sql.Literal(rating))
+            .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear),
+                    critic_id=sql.Literal(critic_id), rating=sql.Literal(rating))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
         result = ReturnValue.ERROR
@@ -504,7 +511,6 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
     finally:
         conn.close()
         return result
-    
 
 
 def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
@@ -514,7 +520,7 @@ def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> Retu
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Reviews "
-                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND criticID={critic_id}").\
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND criticID={critic_id}"). \
             format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -534,7 +540,6 @@ def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> Retu
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    
 
 
 def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int, roles: List[str]) -> ReturnValue:
@@ -549,7 +554,7 @@ def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> Retu
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Roles "
-                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND actorID={actorID}").\
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND actorID={actorID}"). \
             format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -569,7 +574,6 @@ def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> Retu
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-
 
 
 def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: int, revenue: int) -> ReturnValue:
@@ -599,7 +603,7 @@ def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: i
     finally:
         conn.close()
         return result
-    
+    # pass
 
 
 def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> ReturnValue:
@@ -609,7 +613,7 @@ def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> Re
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Productions "
-                        "WHERE movieName={movieName} AND movie_year={movieYear} AND studioID={studioID}"). \            
+                        "WHERE movieName={movieName} AND movie_year={movieYear} AND studioID={studioID}"). \
              .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -629,7 +633,7 @@ def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> Re
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    
+    # pass
 
 
 # ---------------------------------- BASIC API: ----------------------------------
@@ -670,8 +674,8 @@ def averageRating(movieName: str, movieYear: int) -> float:
 
 def averageActorRating(actorID: int) -> float:
     conn = None
-    result=None
-    avg=0
+    result = None
+    avg = 0
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("SELECT COALESCE(AVG(review_rating),0) AS avg1 "
@@ -719,7 +723,6 @@ def stageCrewBudget(movieName: str, movieYear: int) -> int:
 
 
 def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
-    def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
     conn = None
     result=None
     avg=0
@@ -731,7 +734,7 @@ def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bo
                             "WHERE movieName={movieName} AND movie_year={movieYear} AND actorID={actorID}) AS R1 "
                         "WHERE R1.cnt1 >= (SELECT COUNT(review_rating)*0.5 "
                                             "FROM Roles"
-                                            "WHERE movieName={movieName} AND movie_year={movieYear}" ). \            
+                                            "WHERE movieName={movieName} AND movie_year={movieYear}" ). \
              .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
 
         rows_effected, result = conn.execute(query)
@@ -760,7 +763,7 @@ def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bo
 
         conn.close()
         return avg
-
+    # pass
 
 
 # ---------------------------------- ADVANCED API: ----------------------------------
