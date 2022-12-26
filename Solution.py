@@ -24,12 +24,12 @@ def createTables():
                               "critic_name TEXT NOT NULL, "
                               "CHECK (criticID > 0); "
                               
-                              #TODO: IN is not correct syntax
+                              #TODO: IN is apparently correct
                               "CREATE TABLE Movies("
                               "movieName TEXT NOT NULL, "
                               "movie_year INTEGER NOT NULL,"
                               "movie_genre TEXT NOT NULL, "
-                              "CHECK (movie_year >= 1895), CHECK (movie_genre IN ['Drama', 'Action', 'Comedy', 'Horror'])"
+                              "CHECK (movie_year >= 1895), CHECK (movie_genre IN ('Drama', 'Action', 'Comedy', 'Horror'))"
                               "CONSTRAINT Movies_key PRIMARY KEY (movieName, movie_year)); "
 
                               "CREATE TABLE Actors("
@@ -155,9 +155,11 @@ def dropTables():
         conn = Connector.DBConnector()
         transaction = sql.SQL("BEGIN;"
 
-                              # "DROP VIEW QueriesRunOnMultipleDisks; "
+                              "DROP VIEW StudioFilms; "
 
                               "DROP VIEW CriticsToStudio; "
+                              
+                              "DROP TABLE Roles;"
 
                               "DROP TABLE ActingJobs; "
                               
@@ -809,26 +811,25 @@ def studioRevenueByYear() -> List[Tuple[int, int, int]]:
 
 
 def getFanCritics() -> List[Tuple[int, int]]:
-    # TODO: change
     conn = None
-    grouped_revenues = []
+    fan_critics = []
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT T2.studioID, T2.movie_year, COALESCE(SUM(T2.production_revenue,0)) AS tot_revenue "
-                        "FROM Productions AS T2"
-                        "GROUP BY T2.studioID, T2.movie_year"
-                        "ORDER BY T2.studioID DESC;").format()
+        query = sql.SQL("SELECT criticID, studioID"
+                        "FROM CriticToStudio"
+                        "WHERE CriticToStudio.critic_unique = (SELECT studio_unique FROM StudioFilms WHERE StudioFilms.studioID = studioID)"
+                        "ORDER BY criticID DESC, studioID DESC;").format()
         _, result = conn.execute(query)
         conn.commit()
         if not result.isEmpty():
             for i in range(result.size()):
-                grouped_revenues.append((result[i]['studioID'], result[i]['movie_year'], result[i]['tot_revenue']))
+                fan_critics.append((result[i]['criticID'], result[i]['studioID']))
     except Exception as e:
         print(e)
-        grouped_revenues = []
+        fan_critics = []
     finally:
         conn.close()
-    return grouped_revenues
+    return fan_critics
 
 
 def averageAgeByGenre() -> List[Tuple[str, float]]:
