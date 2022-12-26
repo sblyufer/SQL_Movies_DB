@@ -767,12 +767,16 @@ def bestPerformance(actor_id: int) -> Movie:
 def stageCrewBudget(movieName: str, movieYear: int) -> int:
     conn = Connector.DBConnector()
     cur = conn.cursor() 
-    cur.execute("SELECT production_budget, SUM(job_salary) FROM Productions P INNER JOIN ActingJobs A ON P.movieName = A.movieName AND P.movie_year = A.movie_year WHERE P.movieName = %s AND P.movie_year = %s", (movieName, movie_year)) 
+    
+    query = sql.SQL( "SELECT production_budget, SUM(job_salary) FROM Productions P INNER JOIN ActingJobs A ON P.movieName = A.movieName AND P.movie_year = A.movie_year WHERE P.movieName = {movieName} AND P.movie_year = {movie_year}").\
+            format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear) 
+    cur.execute(query)
     row = cur.fetchone() 
     if row == None: 
         return -1 
     else: 
         return row[0] - row[1]
+
 
 def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
     conn = None
