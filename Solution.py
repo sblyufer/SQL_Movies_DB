@@ -24,7 +24,7 @@ def createTables():
                               "critic_name TEXT NOT NULL, "
                               "CHECK (criticID > 0); "
                               
-                              #TODO: change this table
+                              #TODO: IN is not correct syntax
                               "CREATE TABLE Movies("
                               "movieName TEXT NOT NULL, "
                               "movie_year INTEGER NOT NULL,"
@@ -66,11 +66,8 @@ def createTables():
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
                               "CONSTRAINT Roles_key PRIMARY KEY (movie_name, movie_year, actorID)); "
                               
-                              
-                              #TODO: change this table
                               "CREATE TABLE ActingJobs("
                               "job_salary INTEGER NOT NULL CHECK (job_salary > 0), "
-                              "job_roles TEXT NOT NULL, "
                               "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
@@ -366,7 +363,7 @@ def deleteMovie(movie_name: str, year: int) -> ReturnValue:
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE FROM Movies "
-                        "WHERE (movieName = {id1} AND movie_year == {id2});").format(
+                        "WHERE (movieName = {id1} AND movie_year = {id2});").format(
             id1=sql.Literal(movie_name),
             id2=sql.Literal(year))
         rows_effected, _ = conn.execute(query)
