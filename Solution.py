@@ -857,16 +857,18 @@ for row in rows:
 
 
 def getExclusiveActors() -> List[Tuple[int, int]]:
-   Query = '''SELECT actorID, studioID
-               FROM Productions P INNER JOIN Roles R
-               ON P.movieName = R.movieName AND P.movie_year = R.movie_year
-               WHERE NOT EXISTS (SELECT *
-                                  FROM Productions P2 INNER JOIN Roles R2
-                                  ON P2.movieName = R2.movieName AND P2.movie_year = R2.movie_year
-                                  WHERE R2.actorID = R.actorID AND P2.studioID != P.studioID)
-               ORDER BY actorID DESC'''
-    cursor.execute(Query)
-    exclusive_actors = cursor.fetchall() 
+        cur.execute("""SELECT A.actor_id, P.studio_id 
+                        FROM Actors A 
+                        INNER JOIN Roles R 
+                        ON A.actor_id = R.actor_id 
+                        INNER JOIN Productions P 
+                        ON P.movieName = R.movieName 
+                        AND P.movie_year = R.movie_year 
+                        GROUP BY A.actor_id, P.studio_id
+                        HAVING COUNT(DISTINCT P.studio_id) = 1 
+                        ORDER BY A.actor_id DESC""")
+        rows = cur.fetchall()
+        return rows
 
 
 
