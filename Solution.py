@@ -23,12 +23,13 @@ def createTables():
                               "criticID INTEGER PRIMARY KEY, "
                               "critic_name TEXT NOT NULL, "
                               "CHECK (criticID > 0); "
-
+                              
+                              #TODO: change this table
                               "CREATE TABLE Movies("
                               "movieName TEXT NOT NULL, "
                               "movie_year INTEGER NOT NULL,"
                               "movie_genre TEXT NOT NULL, "
-                              "CHECK (movie_year >= 1895), CHECK (movie_genre in ['Drama', 'Action', 'Comedy', 'Horror'])"
+                              "CHECK (movie_year >= 1895), CHECK (movie_genre IN ['Drama', 'Action', 'Comedy', 'Horror'])"
                               "CONSTRAINT Movies_key PRIMARY KEY (movieName, movie_year)); "
 
                               "CREATE TABLE Actors("
@@ -44,45 +45,35 @@ def createTables():
                               "CHECK (studioID > 0); "
 
                               "CREATE TABLE Productions("
-                              "production_budget INTEGER NOT NULL, "
-                              "production_revenue INTEGER NOT NULL, "
+                              "production_budget INTEGER NOT NULL CHECK (production_budget >= 0), "
+                              "production_revenue INTEGER NOT NULL CHECK (production_revenue >=0), "
                               "FOREIGN KEY (studioID) REFERENCES Studios(studioID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)) "
-                              "CHECK (production_budget >= 0 AND production_revenue < 6); "
+                              "CONSTRAINT Productions_key PRIMARY KEY (movie_name, movie_year)); "
 
                               "CREATE TABLE Reviews("
-                              "review_rating INTEGER NOT NULL, "
+                              "review_rating INTEGER NOT NULL CHECK (review_rating > 0), CHECK (review_rating < 6), "
                               "FOREIGN KEY (criticID) REFERENCES Critics(criticID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
                               "CONSTRAINT Reviews_key PRIMARY KEY (movie_name, movie_year, criticID)); "
-                              "CHECK (rating > 0 AND rating < 6); "
                               
                               #TODO: change this table
                               "CREATE TABLE ActingJobs("
-                              "job_salary INTEGER NOT NULL, "
+                              "job_salary INTEGER NOT NULL CHECK (job_salary > 0), "
                               "job_roles TEXT NOT NULL, "
                               "FOREIGN KEY (actorID) REFERENCES Actors(actorID) ON DELETE CASCADE, "
                               "FOREIGN KEY (movieName) REFERENCES Movies(movieName) ON DELETE CASCADE, "
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
-                              "CONSTRAINT Jobs_key PRIMARY KEY (movie_name, movie_year, actorID))"
-                              "CHECK (job_salary > 0); "
+                              "CONSTRAINT Jobs_key PRIMARY KEY (movie_name, movie_year, actorID));"
 
-                              # "CREATE VIEW QueriesRunOnMultipleDisks AS "
-                              # "SELECT T1.query_id "
-                              # "FROM (SELECT query_id,COUNT(query_id) AS count_ "
-                              # "      FROM R1 "
-                              # "      GROUP BY query_id) AS T1 "
-                              # "WHERE T1.count_ > 1;"
-
-                              # "CREATE VIEW QueriesCanRunOnDisks AS "
-                              # "SELECT T1.disk_id, COUNT(T1.query_id) AS count_ "
-                              # "FROM (SELECT Q.query_id, D.disk_id "
-                              # "      FROM Disks D, Queries Q "
-                              # "      WHERE D.free_space >= Q.query_size) AS T1 "
-                              # "GROUP BY T1.disk_id;"
+                              # TODO: figure out correct group by
+                              "CREATE VIEW CriticToStudio AS "
+                              "SELECT V1.criticID, V1.studioID, COUNT(?)"
+                              "FROM (Production INNER JOIN Reviews"
+                              "ON (Production.movie_name = Reviews.movie_name AND Production.movie_year = Reviews.movie_year)) AS V1 "
+                              "GROUP BY V1.criticID, V1.studioID;"
 
                               "COMMIT;")
 
@@ -155,7 +146,7 @@ def dropTables():
 
                               # "DROP VIEW QueriesRunOnMultipleDisks; "
 
-                              # "DROP VIEW QueriesCanRunOnDisks; "
+                              "DROP VIEW CriticsToStudio; "
 
                               "DROP TABLE ActingJobs; "
                               
@@ -388,7 +379,7 @@ def getMovieProfile(movie_name: str, year: int) -> Movie:
         conn = Connector.DBConnector()
         sql_query = sql.SQL("SELECT * "
                             "FROM Movie "
-                            "WHERE (movieName = {id1} AND movie_year == {id2});").format(
+                            "WHERE (movieName = {id1} AND movie_year = {id2});").format(
             id1=sql.Literal(movie_name),
             id2=sql.Literal(year))
         _, result = conn.execute(sql_query)
