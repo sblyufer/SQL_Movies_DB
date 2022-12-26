@@ -836,12 +836,28 @@ def getFanCritics() -> List[Tuple[int, int]]:
 
 
 def averageAgeByGenre() -> List[Tuple[str, float]]:
-    # TODO: implement
-    pass
+     cur.execute("SELECT genre, AVG(age) FROM Movies m JOIN Roles r ON m.movie_id = r.movie_id JOIN Actors a ON a.actor_id = r.actor_id GROUP BY genre;")
+
+# Fetch all of the rows from the query
+rows = cur.fetchall()
+
+# Close the connection
+conn.close()
+
+# Store the results in a list of tuples
+averageAgeByGenre = []
+for row in rows:
+    averageAgeByGenre.append( (row[0], row[1]) )
+
+
 
 
 def getExclusiveActors() -> List[Tuple[int, int]]:
-    # TODO: implement
-    pass
+   Query = "SELECT actor_id, studio_id FROM (SELECT actor_id, studio_id, COUNT(*) AS count FROM Movies m INNER JOIN Roles r ON m.movie_id = r.movie_id INNER JOIN Actors a ON r.actor_id = a.actor_id INNER JOIN Studios s ON m.studio_id = s.studio_id GROUP BY actor_id, studio_id) AS result WHERE count = 1 ORDER BY actor_id DESC"
+
+    cursor.execute(Query)
+    exclusive_actors = cursor.fetchall() 
+
+
 
 # GOOD LUCK!
