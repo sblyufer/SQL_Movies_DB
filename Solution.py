@@ -508,7 +508,7 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
     finally:
         conn.close()
         return result
-    pass
+    
 
 
 def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
@@ -538,7 +538,7 @@ def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> Retu
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    pass
+    
 
 
 def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int, roles: List[str]) -> ReturnValue:
@@ -578,7 +578,7 @@ def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: i
     finally:
         conn.close()
         return result
-    pass
+    
 
 
 def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> ReturnValue:
@@ -608,7 +608,7 @@ def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> Re
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    pass
+    
 
 
 # ---------------------------------- BASIC API: ----------------------------------
@@ -663,8 +663,48 @@ def stageCrewBudget(movieName: str, movieYear: int) -> int:
 
 
 def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
-    # TODO: implement
-    pass
+    def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
+    conn = None
+    result=None
+    avg=0
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT * "
+                        "FROM (SELECT COALESCE(COUNT(review_rating),0) AS cnt1 "
+                            "FROM Roles"
+                            "WHERE movieName={movieName} AND movie_year={movieYear} AND actorID={actorID}) AS R1 "
+                        "WHERE R1.cnt1 >= (SELECT COUNT(review_rating)*0.5 "
+                                            "FROM Roles"
+                                            "WHERE movieName={movieName} AND movie_year={movieYear}" ). \            
+             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
+
+        rows_effected, result = conn.execute(query)
+        conn.commit()
+    except DatabaseException.ConnectionInvalid as e:
+        avg = False
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        conn.rollback()
+        avg = False
+    except DatabaseException.CHECK_VIOLATION as e:
+        conn.rollback()
+        avg = False
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        conn.rollback()
+        avg = False
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        conn.rollback()
+        avg = False
+    except Exception as e:
+        conn.rollback()
+        avg = False
+    finally:
+        if result:
+            if not result.isEmpty():
+                avg = TRUE
+
+        conn.close()
+        return avg
+
 
 
 # ---------------------------------- ADVANCED API: ----------------------------------
