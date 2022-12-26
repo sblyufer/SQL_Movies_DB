@@ -673,8 +673,43 @@ def averageRating(movieName: str, movieYear: int) -> float:
 
 
 def averageActorRating(actorID: int) -> float:
-    # TODO: implement
-    pass
+    conn = None
+    result=None
+    avg=0
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT COALESCE(AVG(review_rating),0) AS avg1 "
+                        "FROM Reviews R "
+                        "WHERE R.movieName,R.movie_year IN (SELECT movieName,movie_year "
+                        "                     FROM Roles "
+                        "                     WHERE actorID = {actorID});").format(
+            actorID=sql.Literal(actorID))
+
+        rows_effected, result = conn.execute(query)
+        conn.commit()
+    except DatabaseException.ConnectionInvalid as e:
+        avg = -1
+    except DatabaseException.NOT_NULL_VIOLATION as e:
+        conn.rollback()
+        avg = -1
+    except DatabaseException.CHECK_VIOLATION as e:
+        conn.rollback()
+        avg = -1
+    except DatabaseException.UNIQUE_VIOLATION as e:
+        conn.rollback()
+        avg = -1
+    except DatabaseException.FOREIGN_KEY_VIOLATION as e:
+        conn.rollback()
+        avg = 0
+    except Exception as e:
+        conn.rollback()
+        avg = -1
+    finally:
+        if result:
+            if not result.isEmpty():
+                avg = result[0]['avg1']
+        conn.close()
+        return avg
 
 
 def bestPerformance(actor_id: int) -> Movie:
