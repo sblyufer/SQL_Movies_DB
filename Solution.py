@@ -73,12 +73,18 @@ def createTables():
                               "FOREIGN KEY (movie_year) REFERENCES Movies(movie_year) ON DELETE CASCADE, "
                               "CONSTRAINT Jobs_key PRIMARY KEY (movie_name, movie_year, actorID));"
 
-                              # TODO: figure out correct group by
+                              # TODO: check if correct
                               "CREATE VIEW CriticToStudio AS "
-                              "SELECT V1.criticID, V1.studioID, COUNT(?)"
-                              "FROM (Production INNER JOIN Reviews"
+                              "SELECT V1.criticID, V1.studioID, COUNT(*) AS critic_unique"
+                              "FROM (Productions INNER JOIN Reviews"
                               "ON (Production.movie_name = Reviews.movie_name AND Production.movie_year = Reviews.movie_year)) AS V1 "
                               "GROUP BY V1.criticID, V1.studioID;"
+                              
+                              # TODO: same correctness as above
+                              "CREATE VIEW StudioFilms AS "
+                              "SELECT studioID, COUNT(*) AS studio_unique"
+                              "FROM Productions"
+                              "GROUP BY V1.studioID;"
 
                               "COMMIT;")
 
@@ -803,8 +809,26 @@ def studioRevenueByYear() -> List[Tuple[int, int, int]]:
 
 
 def getFanCritics() -> List[Tuple[int, int]]:
-    # TODO: implement
-    pass
+    # TODO: change
+    conn = None
+    grouped_revenues = []
+    try:
+        conn = Connector.DBConnector()
+        query = sql.SQL("SELECT T2.studioID, T2.movie_year, COALESCE(SUM(T2.production_revenue,0)) AS tot_revenue "
+                        "FROM Productions AS T2"
+                        "GROUP BY T2.studioID, T2.movie_year"
+                        "ORDER BY T2.studioID DESC;").format()
+        _, result = conn.execute(query)
+        conn.commit()
+        if not result.isEmpty():
+            for i in range(result.size()):
+                grouped_revenues.append((result[i]['studioID'], result[i]['movie_year'], result[i]['tot_revenue']))
+    except Exception as e:
+        print(e)
+        grouped_revenues = []
+    finally:
+        conn.close()
+    return grouped_revenues
 
 
 def averageAgeByGenre() -> List[Tuple[str, float]]:
