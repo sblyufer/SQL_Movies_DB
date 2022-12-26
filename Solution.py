@@ -836,7 +836,11 @@ def getFanCritics() -> List[Tuple[int, int]]:
 
 
 def averageAgeByGenre() -> List[Tuple[str, float]]:
-     cur.execute("SELECT genre, AVG(age) FROM Movies m JOIN Roles r ON m.movie_id = r.movie_id JOIN Actors a ON a.actor_id = r.actor_id GROUP BY genre;")
+   cur.execute("SELECT movie_genre, AVG(actor_age) AS average_age 
+                 FROM Actors INNER JOIN Roles 
+                 ON Actors.actorID = Roles.actorID 
+                 GROUP BY movie_genre")
+    
 
 # Fetch all of the rows from the query
 rows = cur.fetchall()
@@ -853,8 +857,14 @@ for row in rows:
 
 
 def getExclusiveActors() -> List[Tuple[int, int]]:
-   Query = "SELECT actor_id, studio_id FROM (SELECT actor_id, studio_id, COUNT(*) AS count FROM Movies m INNER JOIN Roles r ON m.movie_id = r.movie_id INNER JOIN Actors a ON r.actor_id = a.actor_id INNER JOIN Studios s ON m.studio_id = s.studio_id GROUP BY actor_id, studio_id) AS result WHERE count = 1 ORDER BY actor_id DESC"
-
+   Query = '''SELECT actorID, studioID
+               FROM Productions P INNER JOIN Roles R
+               ON P.movieName = R.movieName AND P.movie_year = R.movie_year
+               WHERE NOT EXISTS (SELECT *
+                                  FROM Productions P2 INNER JOIN Roles R2
+                                  ON P2.movieName = R2.movieName AND P2.movie_year = R2.movie_year
+                                  WHERE R2.actorID = R.actorID AND P2.studioID != P.studioID)
+               ORDER BY actorID DESC'''
     cursor.execute(Query)
     exclusive_actors = cursor.fetchall() 
 
