@@ -716,22 +716,22 @@ def averageActorRating(actorID: int) -> float:
         rows_effected, result = conn.execute(query)
         conn.commit()
     except DatabaseException.ConnectionInvalid as e:
-        avg = -1
+        avg = 0
     except DatabaseException.NOT_NULL_VIOLATION as e:
         conn.rollback()
-        avg = -1
+        avg = 0
     except DatabaseException.CHECK_VIOLATION as e:
         conn.rollback()
-        avg = -1
+        avg = 0
     except DatabaseException.UNIQUE_VIOLATION as e:
         conn.rollback()
-        avg = -1
+        avg = 0
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
         conn.rollback()
         avg = 0
     except Exception as e:
         conn.rollback()
-        avg = -1
+        avg = 0
     finally:
         if result:
             record = result.fetchone()
