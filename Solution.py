@@ -668,7 +668,7 @@ def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> Re
 def averageRating(movieName: str, movieYear: int) -> float:
     conn = None
     output = 0
-    rows_effected, result = 0, ResultSet()
+    rows_effected, result = 0
     try:
         query = sql.SQL("SELECT AVG(review_rating) "
                         "FROM Reviews "
