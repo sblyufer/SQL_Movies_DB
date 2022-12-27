@@ -566,11 +566,11 @@ def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int
     except DatabaseException.ConnectionInvalid as e:
         result = ReturnValue.ERROR
     except DatabaseException.NOT_NULL_VIOLATION as e:
-        result = ReturnValue.NOT_EXISTS
+        result = ReturnValue.BAD_PARAMS
     except DatabaseException.CHECK_VIOLATION as e:
-        result = ReturnValue.NOT_EXISTS
+        result = ReturnValue.BAD_PARAMS
     except DatabaseException.UNIQUE_VIOLATION as e:
-        result = ReturnValue.NOT_EXISTS
+        result = ReturnValue.ALREADY_EXISTS
     except DatabaseException.FOREIGN_KEY_VIOLATION as e:
         result = ReturnValue.NOT_EXISTS
     except Exception as e:
