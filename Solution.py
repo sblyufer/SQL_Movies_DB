@@ -510,7 +510,7 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
     finally:
         conn.close()
         return result
-    pass
+    
 
 
 def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
@@ -575,7 +575,7 @@ def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int
 
 def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> ReturnValue:
     conn = None
-    rows_effected, result = 0, ReturnValue.OK
+    rows_effected, result = ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
