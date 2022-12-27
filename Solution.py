@@ -90,7 +90,17 @@ def createTables():
                               "SELECT V2.studioID, COUNT(*) AS count2 "
                               "FROM (SELECT P2.studioID, P2.movieName, P2.movie_year "
                               "      FROM Productions P2) AS V2 "
-                              "GROUP BY V2.studioID;").format()
+                              "GROUP BY V2.studioID;"
+
+                              "CREATE VIEW ActorsToGenre AS "
+                              "SELECT M.movie_genre, AVG(A.actorID)"
+                              "FROM Movies M "
+                              "INNER JOIN ActingJobs AJ "
+                              "ON M.movieName = AJ.movieName "
+                              "AND M.movie_year = AJ.movie_year "
+                              "INNER JOIN Actors A "
+                              "ON A.actorID = AJ.actorID "
+                              "GROUP BY M.movie_genre;").format()
 
         conn.execute(transaction)
         conn.commit()
@@ -121,13 +131,13 @@ def clearTables():
         conn = Connector.DBConnector()
         transaction = sql.SQL("BEGIN;"
 
-                              "DELETE * FROM Critics; "
+                              "DELETE FROM Critics; "
 
-                              "DELETE * FROM Movies; "
+                              "DELETE FROM Movies; "
 
-                              "DELETE * FROM Actors;"
+                              "DELETE FROM Actors;"
 
-                              "DELETE * FROM Studios; "
+                              "DELETE FROM Studios; "
 
                               "COMMIT;")
 
@@ -180,7 +190,7 @@ def dropTables():
 
                               "DROP TABLE IF EXISTS Productions CASCADE; "
 
-
+                              "DROP TABLE IF EXISTS ActorsToGenre CASCADE; "
 
                               "COMMIT;")
 
@@ -398,7 +408,7 @@ def getMovieProfile(movie_name: str, year: int) -> Movie:
     try:
         conn = Connector.DBConnector()
         sql_query = sql.SQL("SELECT * "
-                            "FROM Movie "
+                            "FROM Movies "
                             "WHERE (movieName = {id1} AND movie_year = {id2});").format(
             id1=sql.Literal(movie_name),
             id2=sql.Literal(year))
@@ -409,7 +419,7 @@ def getMovieProfile(movie_name: str, year: int) -> Movie:
         else:
             movie.setMovieName(str(result[0]['movieName']))
             movie.setYear(int(result[0]['movie_year']))
-            movie.setGenre(int(result[0]['movie_genre']))
+            movie.setGenre(str(result[0]['movie_genre']))
     except Exception:
         movie = movie.badMovie()
     finally:
@@ -487,13 +497,13 @@ def getStudioProfile(studio_id: int) -> Studio:
 
 def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int) -> ReturnValue:
     result = ReturnValue.OK
-    rows_effected = 0
     conn = None
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("INSERT INTO Reviews(movieName,movie_year,criticID,review_rating) "
                         "VALUES({movieName}, {movieYear}, {critic_id}, {rating})") \
-            .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id),rating=sql.Literal(rating))
+            .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear),
+                    critic_id=sql.Literal(critic_id), rating=sql.Literal(rating))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
         result = ReturnValue.ERROR
@@ -510,17 +520,16 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
     finally:
         conn.close()
         return result
-    
 
 
 def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected, result = 0, ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Reviews "
-                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND criticID={critic_id}").\
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND criticID={critic_id}"). \
             format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), critic_id=sql.Literal(critic_id))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -540,18 +549,18 @@ def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> Retu
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    
+
 
 def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int, roles: List[str]) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected, result = 0, ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("INSERT INTO ActingJobs (job_salary, movieName, movie_year, actorID) VALUES ({job_salary},{movieName},{movieYear},{actorID})")\
-            .format(job_salary=sql.Literal(job_salary), movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
+            .format(job_salary=sql.Literal(salary), movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
         rows_effected, _ = conn.execute(query)
         for role in roles:
-            cur.execute("INSERT INTO Roles (roleName, movieName, movie_year, actorID) VALUES ({role},{movieName},{movieYear},{actorID})")\
+            conn.execute("INSERT INTO Roles (roleName, movieName, movie_year, actorID) VALUES ({role},{movieName},{movieYear},{actorID})")\
                 .format(role=sql.Literal(role), movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
             rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -573,14 +582,14 @@ def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int
         return result
 
 
-def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> ReturnValue:
+def actorDidntPlayInMovie(movieName: str, movieYear: int, actorID: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected, result = 0, ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Roles "
-                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND actorID={actorID}").\
+                        "WHERE movieName={movieName} AND movie_year={movieYear}  AND actorID={actorID}"). \
             format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
@@ -600,21 +609,17 @@ def actorDidntPlayeInMovie(movieName: str, movieYear: int, actorID: int) -> Retu
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-   
-
 
 
 def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: int, revenue: int) -> ReturnValue:
     result = ReturnValue.OK
-    rows_effected = 0
     conn = None
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("INSERT INTO "
-                        "Productions(movieName,movie_year,studioID,budget,revenue) "
-                        "VALUES({movieName}, {movieYear}, {studioID}, {budget}, {revenue})") \
-             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID), critic_id=sql.Literal(critic_id),budget=sql.Literal(budget),
-                    revenue=sql.Literal(revenue))
+        query = sql.SQL("INSERT INTO Productions(production_budget,production_revenue,studioID,movieName,movie_year) "
+                        "VALUES({_budget}, {_revenue}, {_studioID}, {_movieName}, {_movieYear})") \
+            .format(_budget=sql.Literal(budget), _revenue=sql.Literal(revenue),
+                    _studioID=sql.Literal(studioID), _movieName=sql.Literal(movieName), _movieYear=sql.Literal(movieYear))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
         result = ReturnValue.ERROR
@@ -631,18 +636,17 @@ def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: i
     finally:
         conn.close()
         return result
-    pass
+
 
 
 def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected, result = 0, ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
                         "FROM Productions "
-                        "WHERE movieName={movieName} AND movie_year={movieYear} AND studioID={studioID}"). \            
-             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID))
+                        "WHERE movieName={movieName} AND movie_year={movieYear} AND studioID={studioID}").format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), studioID=sql.Literal(studioID))
         rows_effected, _ = conn.execute(query)
     except DatabaseException.ConnectionInvalid as e:
         result = ReturnValue.ERROR
@@ -661,7 +665,6 @@ def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> Re
         if rows_effected == 0:
             return ReturnValue.NOT_EXISTS
         return result
-    pass
 
 
 # ---------------------------------- BASIC API: ----------------------------------
@@ -701,13 +704,14 @@ def averageRating(movieName: str, movieYear: int) -> float:
 
 def averageActorRating(actorID: int) -> float:
     conn = None
-    result=None
-    avg=0
+    result = None
+    avg = 0
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT AVG(review_rating) FROM Reviews INNER JOIN Roles ON Reviews.movieName = Roles.movieName AND Reviews.movie_year = Roles.movie_year WHERE Roles.actorID = {actorID}"
-    .format(
-            actorID=sql.Literal(actorID))
+        query = sql.SQL(
+            "SELECT AVG(review_rating) FROM Reviews INNER JOIN Roles ON Reviews.movieName = Roles.movieName AND Reviews.movie_year = Roles.movie_year WHERE Roles.actorID = {actorID}"
+            .format(
+                actorID=sql.Literal(actorID))
 
         rows_effected, result = conn.execute(query)
         conn.commit()
@@ -730,12 +734,13 @@ def averageActorRating(actorID: int) -> float:
         avg = -1
     finally:
         if result:
-            record=result.fetchone() 
-            if record is None: 
+            record = result.fetchone()
+            if record is None:
                 return 0
-            
+
         conn.close()
         return record[0];
+
 
 def bestPerformance(actor_id: int) -> Movie:
     conn = None
@@ -764,18 +769,20 @@ def bestPerformance(actor_id: int) -> Movie:
         conn.close()
     return movie
 
+
 def stageCrewBudget(movieName: str, movieYear: int) -> int:
     conn = Connector.DBConnector()
-    cur = conn.cursor() 
-    
-    query = sql.SQL( "SELECT production_budget, SUM(job_salary) FROM Productions P INNER JOIN ActingJobs A ON P.movieName = A.movieName AND P.movie_year = A.movie_year WHERE P.movieName = {movieName} AND P.movie_year = {movie_year}").\
-            format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear) 
+    cur = conn.cursor()
+
+    query = sql.SQL(
+        "SELECT production_budget, SUM(job_salary) FROM Productions P INNER JOIN ActingJobs A ON P.movieName = A.movieName AND P.movie_year = A.movie_year WHERE P.movieName = {movieName} AND P.movie_year = {movie_year}"). \
+        format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear)
     cur.execute(query)
-    row = cur.fetchone() 
-    if row == None: 
-        return -1 
-    else: 
-        return row[0] - row[1]
+    row = cur.fetchone()
+    if row == None:
+        return -1
+    else:
+    return row[0] - row[1]
 
 
 def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bool:
@@ -790,7 +797,7 @@ def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bo
                             "WHERE movieName={movieName} AND movie_year={movieYear} AND actorID={actorID}) AS R1 "
                             "WHERE R1.cnt1 >= (SELECT COUNT(review_rating)*0.5 "
                                             "FROM Roles"
-                                            "WHERE movieName={movieName} AND movie_year={movieYear}" ) \            
+                                            "WHERE movieName={movieName} AND movie_year={movieYear}" ) \
                             .format(movieName=sql.Literal(movieName), movieYear=sql.Literal(movieYear), actorID=sql.Literal(actorID))
 
         rows_effected, result = conn.execute(query)
@@ -820,6 +827,7 @@ def overlyInvestedInMovie(movie_name: str, movie_year: int, actor_id: int) -> bo
         conn.close()
         return avg
 
+
 # ---------------------------------- ADVANCED API: ----------------------------------
 
 
@@ -828,10 +836,12 @@ def franchiseRevenue() -> List[Tuple[str, int]]:
     grouped_revenues = []
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT T1.movieName, COALESCE(SUM(T1.production_revenue,0)) AS tot_revenue "
-                        "FROM (Productions P1 RIGHT OUTER JOIN Movie M1 ON (P1.movieName = M1.movieName AND P1.movie_year = M1.movie_year)) AS T1"
-                        "GROUP BY T1.movieName"
-                        "ORDER BY movieName DESC;").format()
+        query = sql.SQL("SELECT "
+                        "M1.movieName, COALESCE(SUM(P1.production_revenue),0) AS tot_revenue "
+                        "FROM (Productions P1 RIGHT OUTER JOIN Movies M1 "
+                        "ON (P1.movieName = M1.movieName AND P1.movie_year = M1.movie_year)) "
+                        "GROUP BY M1.movieName "
+                        "ORDER BY M1.movieName DESC ;").format()
         _, result = conn.execute(query)
         conn.commit()
         if not result.isEmpty():
@@ -850,10 +860,10 @@ def studioRevenueByYear() -> List[Tuple[int, int, int]]:
     grouped_revenues = []
     try:
         conn = Connector.DBConnector()
-        query = sql.SQL("SELECT T2.studioID, T2.movie_year, COALESCE(SUM(T2.production_revenue,0)) AS tot_revenue "
-                        "FROM Productions AS T2"
-                        "GROUP BY T2.studioID, T2.movie_year"
-                        "ORDER BY T2.studioID DESC;").format()
+        query = sql.SQL("SELECT studioID, movie_year, SUM(production_revenue) AS tot_revenue "
+                        "FROM Productions "
+                        "GROUP BY studioID, movie_year "
+                        "ORDER BY studioID DESC;").format()
         _, result = conn.execute(query)
         conn.commit()
         if not result.isEmpty():
@@ -869,6 +879,7 @@ def studioRevenueByYear() -> List[Tuple[int, int, int]]:
 
 def getFanCritics() -> List[Tuple[int, int]]:
     conn = None
+    #TODO: fix no studios
     fan_critics = []
     try:
         conn = Connector.DBConnector()
@@ -890,40 +901,50 @@ def getFanCritics() -> List[Tuple[int, int]]:
 
 
 def averageAgeByGenre() -> List[Tuple[str, float]]:
-   cur.execute("SELECT movie_genre, AVG(actor_age) AS average_age 
-                 FROM Actors INNER JOIN Roles 
-                 ON Actors.actorID = Roles.actorID 
-                 GROUP BY movie_genre")
-    
-
-# Fetch all of the rows from the query
-rows = cur.fetchall()
-
-# Close the connection
-conn.close()
-
-# Store the results in a list of tuples
-averageAgeByGenre = []
-for row in rows:
-    averageAgeByGenre.append( (row[0], row[1]) )
-
-
+    conn = None
+    avg_by_genre = []
+    try:
+        conn = Connector.DBConnector()
+        # query = sql.SQL("SELECT "
+        #                 "M.movie_genre, AVG(DISTINCT A.actorID) as avg "
+        #                 "FROM Movies M "
+        #                 "INNER JOIN ActingJobs AJ "
+        #                 "ON M.movieName = AJ.movieName "
+        #                 "AND M.movie_year = AJ.movie_year"
+        #                 "INNER JOIN Actors A "
+        #                 "ON A.actorID = AJ.actorID AS "
+        #                 "GROUP BY M.movie_genre ;").format()
+        query = sql.SQL("SELECT *"
+                        "FROM ActorsToGenre;").format()
+        _, result = conn.execute(query)
+        conn.commit()
+        if not result.isEmpty():
+            for i in range(result.size()):
+                avg_by_genre.append((result[i]['movie_genre'], result[i]['avg']))
+    except Exception as e:
+        print(e)
+        avg_by_genre = []
+    finally:
+        conn.close()
+    return avg_by_genre
 
 
 def getExclusiveActors() -> List[Tuple[int, int]]:
-        cur.execute("""SELECT A.actor_id, P.studio_id 
-                        FROM Actors A 
-                        INNER JOIN Roles R 
-                        ON A.actor_id = R.actor_id 
-                        INNER JOIN Productions P 
-                        ON P.movieName = R.movieName 
-                        AND P.movie_year = R.movie_year 
-                        GROUP BY A.actor_id, P.studio_id
-                        HAVING COUNT(DISTINCT P.studio_id) = 1 
-                        ORDER BY A.actor_id DESC""")
-        rows = cur.fetchall()
-        return rows
+    # TODO: implement
+    pass
 
 
+# cur.execute("""SELECT A.actor_id, P.studio_id
+#                 FROM Actors A
+#                 INNER JOIN Roles R
+#                 ON A.actor_id = R.actor_id
+#                 INNER JOIN Productions P
+#                 ON P.movieName = R.movieName
+#                 AND P.movie_year = R.movie_year
+#                 GROUP BY A.actor_id, P.studio_id
+#                 HAVING COUNT(DISTINCT P.studio_id) = 1
+#                 ORDER BY A.actor_id DESC""")
+# rows = cur.fetchall()
+# return rows
 
 # GOOD LUCK!
