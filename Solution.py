@@ -686,7 +686,7 @@ def averageRating(movieName: str, movieYear: int) -> float:
         if output is None:
             output = 0
     except DatabaseException.ConnectionInvalid as e:
-        output = -1
+        output = 0
     except DatabaseException.NOT_NULL_VIOLATION as e:
         output = 0
     except DatabaseException.CHECK_VIOLATION as e:
