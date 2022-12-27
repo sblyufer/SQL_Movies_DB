@@ -524,7 +524,7 @@ def criticRatedMovie(movieName: str, movieYear: int, critic_id: int, rating: int
 
 def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected= 0, result=ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
@@ -553,7 +553,7 @@ def criticDidntRateMovie(movieName: str, movieYear: int, critic_id: int) -> Retu
 
 def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int, roles: List[str]) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected= 0, result=ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("INSERT INTO ActingJobs (job_salary, movieName, movie_year, actorID) VALUES ({job_salary},{movieName},{movieYear},{actorID})")\
@@ -584,7 +584,7 @@ def actorPlayedInMovie(movieName: str, movieYear: int, actorID: int, salary: int
 
 def actorDidntPlayInMovie(movieName: str, movieYear: int, actorID: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected= 0, result=ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
@@ -641,7 +641,7 @@ def studioProducedMovie(studioID: int, movieName: str, movieYear: int, budget: i
 
 def studioDidntProduceMovie(studioID: int, movieName: str, movieYear: int) -> ReturnValue:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected= 0, result=ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL("DELETE "
@@ -744,7 +744,7 @@ def averageActorRating(actorID: int) -> float:
 
 def bestPerformance(actor_id: int) -> Movie:
     conn = None
-    rows_effected, result = ReturnValue.OK
+    rows_effected= 0, result=ReturnValue.OK
     try:
         conn = Connector.DBConnector()
         query = sql.SQL(    "SELECT m.movieName, m.movie_year, AVG(r.review_rating) as avg_rating "
